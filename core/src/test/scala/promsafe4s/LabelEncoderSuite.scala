@@ -9,9 +9,11 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.model.snapshots.{CounterSnapshot, GaugeSnapshot, HistogramSnapshot}
 import munit.FunSuite
 
-final class LabelEncoderSuite extends FunSuite {
-  final case class Labels(method: String, status: Int)
+private final case class Labels(method: String, status: Int)
+private final case class Request(labels: Labels)
+private final case class Status(value: Int)
 
+final class LabelEncoderSuite extends FunSuite {
   test("explicit encoders preserve declared names and order") {
     val encoder = LabelEncoder[Labels]
       .label("method")(_.method)
@@ -22,7 +24,6 @@ final class LabelEncoderSuite extends FunSuite {
   }
 
   test("contramap changes the input type without changing the schema") {
-    final case class Request(labels: Labels)
     val encoder = LabelEncoder[Labels]
       .label("method")(_.method)
       .contramap[Request](_.labels)
@@ -31,7 +32,6 @@ final class LabelEncoderSuite extends FunSuite {
   }
 
   test("custom Show instances control label rendering") {
-    final case class Status(value: Int)
     implicit val statusShow: Show[Status] = Show.show(status => s"status-${status.value}")
     val encoder = LabelEncoder[Status].label("status")(identity)
 
