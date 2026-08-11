@@ -1,5 +1,4 @@
 ThisBuild / organization := "io.github.javierarrieta"
-ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "3.3.7"
 ThisBuild / crossScalaVersions := Seq("2.13.18", "3.3.7")
 ThisBuild / javacOptions ++= Seq("--release", "11")
