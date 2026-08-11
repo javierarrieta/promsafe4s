@@ -1,0 +1,24 @@
+target/
+project/target/
+project/project/
+*.class
+
+# sbt / Scala build output
+*.tasty
+
+# Metals / BSP
+.bsp/
+.metals/
+.scala-build/
+
+# VS Code
+.vscode/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# macOS
+.DS_Store
