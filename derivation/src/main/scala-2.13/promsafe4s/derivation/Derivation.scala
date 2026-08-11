@@ -1,6 +1,6 @@
 package promsafe4s.derivation
 
-import promsafe4s.{Label, LabelEncoder}
+import promsafe4s.LabelEncoder
 import scala.reflect.ClassTag
 
 /**

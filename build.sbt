@@ -2,8 +2,11 @@ ThisBuild / organization := "io.github.javierarrieta"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "3.3.7"
 ThisBuild / crossScalaVersions := Seq("2.13.18", "3.3.7")
-ThisBuild / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked")
 ThisBuild / javacOptions ++= Seq("--release", "11")
+Global / excludeLintKeys ++= Set(
+  git.gitUncommittedChanges,
+  git.gitDescribedVersion
+)
 ThisBuild / homepage := Some(uri("https://github.com/javierarrieta/promsafe4s"))
 ThisBuild / description := "Typed Cats Effect wrappers around the Prometheus Java client"
 ThisBuild / licenses := Seq("Apache-2.0" -> uri("https://www.apache.org/licenses/LICENSE-2.0.txt"))
