@@ -33,6 +33,9 @@ jobs:
       - name: Validate release
         run: sbt --batch "scalafmtSbtCheck;scalafmtCheckAll;+test"
 
+      - name: Stop sbt server
+        run: sbt --batch shutdownall
+
       - name: Publish artifacts
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
