@@ -1,6 +1,6 @@
 package promsafe4s
 
-import cats.effect.kernel.Sync
+import cats.effect.kernel.{Resource, Sync}
 import io.prometheus.metrics.core.metrics.{Histogram => JavaHistogram}
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 
@@ -18,6 +18,9 @@ final case class HistogramBuilder[F[_], A] private[promsafe4s] (
     builder.labelNames(encoder.names.toArray: _*)
     new Histogram[F, A](builder.register(registry), encoder)
   }
+
+  def resource(registry: PrometheusRegistry): Resource[F, Histogram[F, A]] =
+    Resource.make(register(registry))(histogram => F.delay(registry.unregister(histogram.metric)))
 }
 
 object Histogram {
@@ -26,7 +29,7 @@ object Histogram {
 }
 
 final class Histogram[F[_], A] private[promsafe4s] (
-    private val metric: JavaHistogram,
+    private[promsafe4s] val metric: JavaHistogram,
     private val encoder: LabelEncoder[A]
 )(implicit F: Sync[F]) {
   lazy val unsafe: UnsafeHistogram[A] = new UnsafeHistogram[A](metric, encoder)

@@ -101,4 +101,29 @@ final class LabelEncoderSuite extends FunSuite {
     assertEquals(observations, Some(1L))
     assertEquals(gaugeValue, Some(4d))
   }
+
+  test("metric resources unregister their metrics on release") {
+    val registry = new PrometheusRegistry()
+    val resource = for {
+      counter <- Counter.builder[IO]("resource_counter", "A counter managed as a resource").resource(registry)
+      gauge <- Gauge.builder[IO]("resource_gauge", "A gauge managed as a resource").resource(registry)
+      histogram <- Histogram
+        .builder[IO]("resource_histogram", "A histogram managed as a resource")
+        .resource(registry)
+    } yield (counter, gauge, histogram)
+
+    resource
+      .use { case (counter, gauge, histogram) =>
+        for {
+          _ <- counter.inc
+          _ <- gauge.set(1d)
+          _ <- histogram.observe(0.5d)
+          names = registry.scrape().iterator.asScala.map(_.getMetadata.getName).toSet
+          _ = assertEquals(names, Set("resource_counter", "resource_gauge", "resource_histogram"))
+        } yield ()
+      }
+      .unsafeRunSync()
+
+    assertEquals(registry.scrape().iterator.asScala.toList, Nil)
+  }
 }
