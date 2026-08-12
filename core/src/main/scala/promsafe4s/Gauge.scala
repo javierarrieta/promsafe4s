@@ -13,11 +13,15 @@ final case class GaugeBuilder[F[_], A] private[promsafe4s] (
   def labels[B](next: LabelEncoder[B]): GaugeBuilder[F, B] = copy(encoder = next)
   def customizeWith(f: JavaGauge.Builder => JavaGauge.Builder): GaugeBuilder[F, A] =
     copy(customize = customize.andThen(f))
-  def register(registry: PrometheusRegistry): F[Gauge[F, A]] = F.delay {
+
+  /** Executes immediately and may throw a Prometheus client exception. */
+  def unsafeRegistration(registry: PrometheusRegistry): Gauge[F, A] = {
     val builder = customize(JavaGauge.builder().name(name).help(help))
     builder.labelNames(encoder.names.toArray: _*)
     new Gauge[F, A](builder.register(registry), encoder)
   }
+
+  def register(registry: PrometheusRegistry): F[Gauge[F, A]] = F.delay(unsafeRegistration(registry))
 
   def resource(registry: PrometheusRegistry): Resource[F, Gauge[F, A]] =
     Resource.make(register(registry))(gauge => F.delay(registry.unregister(gauge.metric)))

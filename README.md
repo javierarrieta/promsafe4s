@@ -76,6 +76,16 @@ val program: IO[Unit] = for {
 program.unsafeRunSync()
 ```
 
+For imperative callbacks, `unsafeRegistration` registers immediately and may
+throw a Prometheus client exception:
+
+```scala
+val requests = Counter
+  .builder[IO]("http_requests_total", "Completed HTTP requests")
+  .labels(requestLabels)
+  .unsafeRegistration(registry)
+```
+
 ## Resource-managed registration
 
 `Counter`, `Gauge`, and `Histogram` builders also provide `resource`. It

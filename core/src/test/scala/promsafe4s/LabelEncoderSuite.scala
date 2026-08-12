@@ -126,4 +126,30 @@ final class LabelEncoderSuite extends FunSuite {
 
     assertEquals(registry.scrape().iterator.asScala.toList, Nil)
   }
+
+  test("unsafe metric registration returns immediately registered metrics") {
+    val registry = new PrometheusRegistry()
+
+    Counter
+      .builder[IO]("unsafe_registered_counter", "A directly registered counter")
+      .unsafeRegistration(registry)
+      .unsafe
+      .inc
+    Gauge
+      .builder[IO]("unsafe_registered_gauge", "A directly registered gauge")
+      .unsafeRegistration(registry)
+      .unsafe
+      .set(1d)
+    Histogram
+      .builder[IO]("unsafe_registered_histogram", "A directly registered histogram")
+      .unsafeRegistration(registry)
+      .unsafe
+      .observe(0.5d)
+
+    val names = registry.scrape().iterator.asScala.map(_.getMetadata.getName).toSet
+    assertEquals(
+      names,
+      Set("unsafe_registered_counter", "unsafe_registered_gauge", "unsafe_registered_histogram")
+    )
+  }
 }
