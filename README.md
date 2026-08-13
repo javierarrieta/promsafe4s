@@ -76,6 +76,31 @@ val program: IO[Unit] = for {
 program.unsafeRunSync()
 ```
 
+For imperative callbacks, `unsafeRegistration` registers immediately and may
+throw a Prometheus client exception:
+
+```scala
+val requests = Counter
+  .builder[IO]("http_requests_total", "Completed HTTP requests")
+  .labels(requestLabels)
+  .unsafeRegistration(registry)
+```
+
+## Resource-managed registration
+
+`Counter`, `Gauge`, and `Histogram` builders also provide `resource`. It
+registers the metric when acquired and unregisters it when the resource is
+released:
+
+```scala
+val requests = Counter
+  .builder[IO]("http_requests_total", "Completed HTTP requests")
+  .labels(requestLabels)
+  .resource(registry)
+
+requests.use(_.inc(RequestLabels("GET", 200))).unsafeRunSync()
+```
+
 ## Releasing
 
 Publishing is configured through the GitHub Actions release workflow. Create a

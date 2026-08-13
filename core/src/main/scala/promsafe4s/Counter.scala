@@ -1,6 +1,6 @@
 package promsafe4s
 
-import cats.effect.kernel.Sync
+import cats.effect.kernel.{Resource, Sync}
 import io.prometheus.metrics.core.metrics.{Counter => JavaCounter}
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 
@@ -16,12 +16,18 @@ final case class CounterBuilder[F[_], A] private[promsafe4s] (
   def customizeWith(f: JavaCounter.Builder => JavaCounter.Builder): CounterBuilder[F, A] =
     copy(customize = customize.andThen(f))
 
-  def register(registry: PrometheusRegistry): F[Counter[F, A]] = F.delay {
+  /** Executes immediately and may throw a Prometheus client exception. */
+  def unsafeRegistration(registry: PrometheusRegistry): Counter[F, A] = {
     val builder = customize(JavaCounter.builder().name(name).help(help))
     builder.labelNames(encoder.names.toArray: _*)
     val metric = builder.register(registry)
     new Counter[F, A](metric, encoder)
   }
+
+  def register(registry: PrometheusRegistry): F[Counter[F, A]] = F.delay(unsafeRegistration(registry))
+
+  def resource(registry: PrometheusRegistry): Resource[F, Counter[F, A]] =
+    Resource.make(register(registry))(counter => F.delay(registry.unregister(counter.metric)))
 }
 
 object Counter {
@@ -30,7 +36,7 @@ object Counter {
 }
 
 final class Counter[F[_], A] private[promsafe4s] (
-    private val metric: JavaCounter,
+    private[promsafe4s] val metric: JavaCounter,
     private val encoder: LabelEncoder[A]
 )(implicit F: Sync[F]) {
   lazy val unsafe: UnsafeCounter[A] = new UnsafeCounter[A](metric, encoder)

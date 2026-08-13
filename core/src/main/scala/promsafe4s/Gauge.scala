@@ -1,6 +1,6 @@
 package promsafe4s
 
-import cats.effect.kernel.Sync
+import cats.effect.kernel.{Resource, Sync}
 import io.prometheus.metrics.core.metrics.{Gauge => JavaGauge}
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 
@@ -13,11 +13,18 @@ final case class GaugeBuilder[F[_], A] private[promsafe4s] (
   def labels[B](next: LabelEncoder[B]): GaugeBuilder[F, B] = copy(encoder = next)
   def customizeWith(f: JavaGauge.Builder => JavaGauge.Builder): GaugeBuilder[F, A] =
     copy(customize = customize.andThen(f))
-  def register(registry: PrometheusRegistry): F[Gauge[F, A]] = F.delay {
+
+  /** Executes immediately and may throw a Prometheus client exception. */
+  def unsafeRegistration(registry: PrometheusRegistry): Gauge[F, A] = {
     val builder = customize(JavaGauge.builder().name(name).help(help))
     builder.labelNames(encoder.names.toArray: _*)
     new Gauge[F, A](builder.register(registry), encoder)
   }
+
+  def register(registry: PrometheusRegistry): F[Gauge[F, A]] = F.delay(unsafeRegistration(registry))
+
+  def resource(registry: PrometheusRegistry): Resource[F, Gauge[F, A]] =
+    Resource.make(register(registry))(gauge => F.delay(registry.unregister(gauge.metric)))
 }
 
 object Gauge {
@@ -26,7 +33,7 @@ object Gauge {
 }
 
 final class Gauge[F[_], A] private[promsafe4s] (
-    private val metric: JavaGauge,
+    private[promsafe4s] val metric: JavaGauge,
     private val encoder: LabelEncoder[A]
 )(implicit F: Sync[F]) {
   lazy val unsafe: UnsafeGauge[A] = new UnsafeGauge[A](metric, encoder)
